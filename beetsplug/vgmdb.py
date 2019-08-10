@@ -23,9 +23,9 @@ class VGMdbPlugin(BeetsPlugin):
         super(VGMdbPlugin, self).__init__()
         self.config.add({
             'source_weight': 0.0,
-            'lang-priority': 'en, ja-latn'
+            'lang-priority': 'ja-latn, en'
         })
-        log.debug('Querying VGMdb')
+        log.info('VGMdb Plugin loaded')
         self.source_weight = self.config['source_weight'].as_number()
         self.lang = self.config['lang-priority'].get().split(",")
 
@@ -47,7 +47,8 @@ class VGMdbPlugin(BeetsPlugin):
             query = '%s %s' % (artist, album)
         try:
             return self.get_albums(query, va_likely)
-        except:
+        except Error as e:
+            log.debug(str(e))
             log.debug('VGMdb Search Error: (query: %s)' % query)
             return []
 
@@ -58,7 +59,8 @@ class VGMdbPlugin(BeetsPlugin):
         log.debug('Querying VGMdb for release %s' % str(album_id))
 
         # Get from VGMdb
-        r = requests.get('http://vgmdb.info/album/%s?format=json' % str(album_id))
+        r = requests.get(
+            'http://vgmdb.info/album/%s?format=json' % str(album_id))
 
         # Decode Response's content
         try:
@@ -82,7 +84,8 @@ class VGMdbPlugin(BeetsPlugin):
         query = re.sub(r'(?i)\b(CD|disc)\s*\d+', '', query)
 
         # Query VGMdb
-        r = requests.get('http://vgmdb.info/search/albums/%s?format=json' % query)
+        r = requests.get(
+            'http://vgmdb.info/search/albums/%s?format=json' % query)
         albums = []
 
         # Decode Response's content
@@ -135,8 +138,8 @@ class VGMdbPlugin(BeetsPlugin):
 
         artists = []
         for artist in item[artist_type]:
-            if _has_key(artist["names"], self.lang[0]):
-                artists.append(artist["names"][self.lang[0]])
+            if _has_key(artist["names"], "en"):
+                artists.append(artist["names"]["en"])
             else:
                 artists.append(artist["names"]["ja"])
 
@@ -152,10 +155,10 @@ class VGMdbPlugin(BeetsPlugin):
         for disc_index, disc in enumerate(item["discs"]):
             for track_index, track in enumerate(disc["tracks"]):
                 total_index += 1
-                if _has_key(track["names"], "English"):
-                    title = track["names"]["English"]
-                elif _has_key(track["names"], "Romaji"):
+                if _has_key(track["names"], "Romaji"):
                     title = track["names"]["Romaji"]
+                elif _has_key(track["names"], "English"):
+                    title = track["names"]["English"]
                 else:
                     title = list(track["names"].values())[0]
 
@@ -178,17 +181,17 @@ class VGMdbPlugin(BeetsPlugin):
                     medium=int(medium),
                     medium_index=int(medium_index),
                     medium_total=item["discs"].count
-                    )
+                )
                 Tracks.append(new_track)
 
         # Format Album release date
         release_date = item["release_date"].split("-")
-        year  = release_date[0]
+        year = release_date[0]
         month = release_date[1]
-        day   = release_date[2]
+        day = release_date[2]
 
-        if _has_key(item["publisher"]["names"], self.lang[0]):
-            label = item["publisher"]["names"][self.lang[0]]
+        if _has_key(item["publisher"]["names"], "en"):
+            label = item["publisher"]["names"]["en"]
         else:
             label = item["publisher"]["names"]["ja"]
 
@@ -198,21 +201,21 @@ class VGMdbPlugin(BeetsPlugin):
         data_url = item["vgmdb_link"]
 
         return AlbumInfo(album_name,
-                        self.decod(album_id),
-                        artist,
-                        self.decod(artist_id),
-                        Tracks,
-                        asin=None,
-                        albumtype=None,
-                        va=False,
-                        year=int(year),
-                        month=int(month),
-                        day=int(day),
-                        label=label,
-                        mediums=int(mediums),
-                        media=self.decod(media),
-                        data_source=self.decod('VGMdb'),
-                        data_url=self.decod(data_url),
-                        country=self.decod(country),
-                        catalognum=self.decod(catalognum)
-                     )
+                         self.decod(album_id),
+                         artist,
+                         self.decod(artist_id),
+                         Tracks,
+                         asin=None,
+                         albumtype=None,
+                         va=False,
+                         year=int(year),
+                         month=int(month),
+                         day=int(day),
+                         label=label,
+                         mediums=int(mediums),
+                         media=self.decod(media),
+                         data_source=self.decod('VGMdb'),
+                         data_url=self.decod(data_url),
+                         country=self.decod(country),
+                         catalognum=self.decod(catalognum)
+                         )
