@@ -9,6 +9,14 @@ import re
 
 log = logging.getLogger('beets')
 
+
+def _has_key(dict, key):
+    try:
+        return dict.has_key(key)
+    except AttributeError:
+        return key in dict
+
+
 class VGMdbPlugin(BeetsPlugin):
 
     def __init__(self):
@@ -96,8 +104,14 @@ class VGMdbPlugin(BeetsPlugin):
     def decod(self, val, codec='utf8'):
         """Ensure that all string are coded to Unicode.
         """
-        if isinstance(val, basestring):
-            return val.decode(codec, 'ignore')
+        # Python 2
+        try:
+            if isinstance(val, basestring):
+                return val.decode(codec, 'ignore')
+        # Python 3
+        except NameError:
+            if isinstance(val, str):
+                return val
 
     def get_album_info(self, item, va_likely):
         """Convert json data into a format beets can read
@@ -106,7 +120,7 @@ class VGMdbPlugin(BeetsPlugin):
         # If a preferred lang is available use that instead
         album_name = item["name"]
         for lang in self.lang:
-            if item["names"].has_key(lang):
+            if _has_key(item["names"], lang):
                 album_name = item["names"][lang]
 
         album_id = item["link"][6:]
@@ -114,20 +128,20 @@ class VGMdbPlugin(BeetsPlugin):
         catalognum = item["catalog"]
 
         # Get Artist information
-        if item.has_key("performers") and len(item["performers"]) > 0:
+        if _has_key(item, "performers") and len(item["performers"]) > 0:
             artist_type = "performers"
         else:
             artist_type = "composers"
 
         artists = []
         for artist in item[artist_type]:
-            if artist["names"].has_key(self.lang[0]):
+            if _has_key(artist["names"], self.lang[0]):
                 artists.append(artist["names"][self.lang[0]])
             else:
                 artists.append(artist["names"]["ja"])
 
         artist = artists[0]
-        if item[artist_type][0].has_key("link"):
+        if _has_key(item[artist_type][0], "link"):
             artist_id = item[artist_type][0]["link"][7:]
         else:
             artist_id = None
@@ -138,13 +152,12 @@ class VGMdbPlugin(BeetsPlugin):
         for disc_index, disc in enumerate(item["discs"]):
             for track_index, track in enumerate(disc["tracks"]):
                 total_index += 1
-
-                if track["names"].has_key("English"):
+                if _has_key(track["names"], "English"):
                     title = track["names"]["English"]
-                elif track["names"].has_key("Romaji"):
+                elif _has_key(track["names"], "Romaji"):
                     title = track["names"]["Romaji"]
                 else:
-                    title = track["names"].values()[0]
+                    title = list(track["names"].values())[0]
 
                 index = total_index
 
@@ -174,7 +187,7 @@ class VGMdbPlugin(BeetsPlugin):
         month = release_date[1]
         day   = release_date[2]
 
-        if item["publisher"]["names"].has_key(self.lang[0]):
+        if _has_key(item["publisher"]["names"], self.lang[0]):
             label = item["publisher"]["names"][self.lang[0]]
         else:
             label = item["publisher"]["names"]["ja"]
